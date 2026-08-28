@@ -1,4 +1,5 @@
 # Project files
+qdrant_storage/
 *.pdf
 .python-version
 logs/
