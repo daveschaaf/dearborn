@@ -1,5 +1,6 @@
 import logging
 import sys
+from pathlib import Path
 from .logging_config import setup_logging
 from .vector_store import VectorStore
 from .constants import QDRANT_STORAGE, QDRANT_COLLECTION_MP
