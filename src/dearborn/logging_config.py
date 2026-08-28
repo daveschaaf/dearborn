@@ -9,7 +9,7 @@ LOG_DIR.mkdir(exist_ok=True)
 def setup_logging() -> None:
 
     logger = logging.getLogger("dearborn")
-    if logging.handlers:
+    if logger.handlers:
         return
 
     logger.setLevel(logging.DEBUG)
