@@ -6,17 +6,24 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+def rankings_eval(rankings: list[list[int]], golds: list[set[int]] = None) -> dict:
+    if golds is None:
+        golds = GOLDS
+    rows = [per_record_metrics(np.array(r), g) for r, g in zip(rankings, golds)]
+    return {k: aggregate(rows, k) for k in rows[0]}
+
 def retriever_eval(vector_store) -> dict:
     scores = []
-    for i, question in enumerate(QUESTIONS):
+    for question in QUESTIONS:
         results = vector_store.retrieve(question, top_k=len(TEXT))
-        ranking = [result.id for result in results]
-        scores.append(ranking)
-    return scores_eval(scores)
+        scores.append([r.id for r in results])
+    return rankings_eval(scores)
 
-def scores_eval(score_matrix) -> dict:
+def scores_eval(score_matrix, golds: list[set[int]] = None) -> dict:
+    if not golds:
+        golds = GOLDS
     rankings = np.argsort(-score_matrix, axis=1)
-    eval = [per_record_metrics(rankings[i], GOLDS[i]) for i in range(len(GOLDS))]
+    eval = [per_record_metrics(rankings[i], golds[i]) for i in range(len(golds))]
     return {k: aggregate(eval, k) for k in eval[0]}
 
 def tf_idf_scores() -> dict:
@@ -29,5 +36,7 @@ def bm25_scores() -> dict:
     bm25 = BM25Okapi([tokenize(t) for t in TEXT])
     score_matrix = np.stack([bm25.get_scores(tokenize(q)) for q in QUESTIONS])
     return scores_eval(score_matrix)
+
+
 
 

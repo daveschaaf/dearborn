@@ -8,19 +8,22 @@ logger = logging.getLogger(__name__)
 MODEL = "sentence-transformers/all-mpnet-base-v2"
 
 class VectorStore():
-    def __init__(self, url: str, collection: str, delete: bool = False):
+    def __init__(self, url: str, collection: str):
         logger.info(f"VectorStore for collection={collection} initialized")
         self.collection = collection
         self.client = QdrantClient(url=url)
+        logger.info(f"Loading model {MODEL}")
         self.encoder = SentenceTransformer(MODEL)
-        self.create_collection(delete)
+        self.create_collection()
+        print(QueryFilters.model_json_schema())
 
-    def create_collection(self, delete: bool):
+    def delete_collection(self):
+        self.client.delete_collection(self.collection)
+        logger.info(f"Collection={self.collection} deleted")
+
+    def create_collection(self):
         if self.client.collection_exists(self.collection):
             logger.info(f"Collection={self.collection} already exists")
-            if delete:
-                self.client.delete_collection(self.collection)
-                logger.info(f"Collection={self.collection} deleted")
             return
         self.client.create_collection(
           collection_name=self.collection,
@@ -28,13 +31,8 @@ class VectorStore():
         )
         logger.info(f"Collection={self.collection} created.")
 
-    def retrieve(self, query: str, filter: dict, top_k: int = 10) -> list[ScoredPoint]:
-        query_filter = Filter(
-            must= [
-                FieldCondition(key=k, match=MatchValue(value=v))
-                for k, v in filter.items()
-            ]
-        )
+    def retrieve(self, query: str, filters: QueryFilters, top_k: int = 10) -> list[ScoredPoint]:
+        query_filter = self.build_filters(filters)
         query_vector = self.encoder.encode(query, normalize_embeddings=True).tolist()
 
         results = self.client.query_points(
@@ -47,7 +45,7 @@ class VectorStore():
 
         return results
 
-    def upsert(self, texts: list[str], meta: list[tuple], delete: bool = False) -> None:
+    def upsert(self, texts: list[str], meta: list[tuple]) -> None:
         info = self.client.get_collection(self.collection)
         if info.points_count == 5230:
             logger.info(f"Collection={self.collection} already populated; skipping upsert.")
@@ -79,26 +77,25 @@ class VectorStore():
                                        wait=True)
             logger.info(f"Upsert batch #{batch_num} {result.status}, operation_id={result.operation_id}, points={len(batch)}")
 
-    def build_filters(filters: QueryFilters) -> dict:
-        """expects dict of {field: {operator: filter_value}}"""
+    def build_filters(self, query_filters: QueryFilters) -> Filter | None:
+        filters = {
+            "ticker": query_filters.ticker,
+            "year": query_filters.year,
+            "doc_type": query_filters.doc_type
+        }
         conditions = []
-        for query, filter in query_filters.items():
-            if query.lower() not in ['ticker', 'year', 'doc_type']:
-                continue
-            for operator, value in filter:
-                match_filter = None
+        for field, ops in list(filters.items()):
+            for operator, value in ops.items():
+                if value is None:
+                    continue
                 if operator == "$eq":
-                    match_filter=MatchValue(value=value),
+                    field_condition = FieldCondition(key=field, match=MatchValue(value=value))
                 elif operator == "$in":
-                    match_filter=MatchAny(any=value),
+                    field_condition = FieldCondition(key=field, match=MatchAny(any=value))
                 elif operator in ["$lt", "$gt", "$lte", "$gte"]:
-                    match_filter=Range(**{operator.replace("$", ""): filter})
-
-                if match_filter:
-                    conditions.append(
-                        FieldCondition(
-                            key=query.strip().lower(),
-                            match=match_filter
-                        ))
-        return conditions
+                    field_condition = FieldCondition(key=field, range=Range(**{operator.replace("$", ""): value}))
+                else:
+                    continue
+                conditions.append(field_condition)
+        return Filter(must=conditions) if conditions else None
 

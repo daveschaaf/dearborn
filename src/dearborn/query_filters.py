@@ -1,5 +1,7 @@
 from pydantic import BaseModel, field_validator, ConfigDict
 from typing import ClassVar
+import logging
+logger=logging.getLogger(__name__)
 
 class QueryFilters(BaseModel):
     ticker: dict[str, str] = {}
@@ -45,7 +47,9 @@ class QueryFilters(BaseModel):
                 if vals:
                     value[k] = vals
                 else:
+                    logger.debug(f"Removing filter {k}={v}")
                     value.pop(k)
             elif v not in class_set:
+                logger.debug(f"Removing filter {k}={v}")
                 value.pop(k)
         return value

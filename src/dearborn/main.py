@@ -2,8 +2,8 @@ import logging
 from .logging_config import setup_logging
 from .vector_store import VectorStore
 from .constants import QDRANT_COLLECTION_MP
-from .finrank import TEXT, RECORDS
-from .evaluation import retriever_eval, tf_idf_scores, bm25_scores
+from .finrank import TEXT, RECORDS, METADATA, QUESTIONS, GOLDS
+from .evaluation import retriever_eval, tf_idf_scores, bm25_scores, rankings_eval
 from .hyst_query import HySTQuery
 
 QDRANT_URL = "http://localhost:6333"
@@ -13,26 +13,32 @@ def main() -> None:
     logger = logging.getLogger(__name__)
     logger.info("Running main.py...")
 
-    # logger.info("Finding all TICKERS")
-    # tickers = set([r['ticker'] for r in RECORDS])
-    # logger.info(tickers)
-    #
-    # logger.info("Finding all YEARS")
-    # years = set([r['year'] for r in RECORDS])
-    # logger.info(years)
+    hyst_query = HySTQuery("Qwen/Qwen2.5-3B-Instruct")
 
-    logger.info("Running HyST query")
-    query = HySTQuery("Qwen/Qwen2.5-3B-Instruct")
-
-    print(query.query_filters("How much revenue did Ford (F) earn in 1Q2024?"))
-
-    # vector_store = VectorStore(QDRANT_URL, QDRANT_COLLECTION_MP)
+    vector_store = VectorStore(QDRANT_URL, QDRANT_COLLECTION_MP)
+    # vector_store.delete_collection()
+    # vector_store.create_collection()
     # vector_store.upsert(TEXT, METADATA)
 
-    # logger.info("Retriever Evaluation")
+    N = 10
+    scores = []
+    for i in range(N):
+        q = QUESTIONS[i] 
+        logger.info(f"Question: {q}")
+        hyst_result = hyst_query.query_filters(q)
+        logger.info(f"QueryFilters = {hyst_result.filters}")
+        retrieved = vector_store.retrieve(query=hyst_result.query,
+                                          filters=hyst_result.filters,
+                                          top_k=len(TEXT))
+        ranking=[result.id for result in retrieved]
+        scores.append(ranking)
+
+    logger.info("Retriever Evaluation")
+    evaluation = rankings_eval(scores, GOLDS[:N])
+    for metric, value in evaluation.items():
     # for metric, value in retriever_eval(vector_store).items():
-    #     if value:
-    #         logger.info(f"{metric}: {value:.1f}")
+        if value is not None:
+            logger.info(f"{metric}: {value:.1f}")
     # logger.info("TF-IDF Evaluation")
     # for metric, value in tf_idf_scores().items():
     #     if value:
