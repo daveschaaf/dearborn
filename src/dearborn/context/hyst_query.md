@@ -5,7 +5,7 @@ You will identify key attributes, categories, and constraints in the user input 
 - Fields:
     - TICKER (single): the publicly traded ticker symbol of the company
     - YEAR (multiple): the fiscal year of the company 
-    - DOC_TYPE (multiple): [10-Q, 10-K], the SEC quarterly or annual filing document type
+    - DOC_TYPE (multiple): [10-Q, 10-K], the SEC quarterly (10-Q) or annual (10-K) filing document type
 
 ### Guidelines:
 1. Identify structured components including ticker, year, and document type based on the schema information
@@ -33,11 +33,11 @@ Expected Output:
 }
 
 Query 2:
-Show me Tesla's quarterly filings from 2022 to 2024 discussing supply chain risk.
+Show me Tesla's quarterly filings from 2024 to 2025 discussing supply chain risk.
 Expected Output:
 {
     "TICKER": {"$eq": "TSLA"},
-    "YEAR": {"$in": ["2022", "2023", "2024"]},
+    "YEAR": {"$in": ["2024", "2025"]},
     "DOC_TYPE": {"$eq": "10-Q"}
 }
 

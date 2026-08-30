@@ -1,18 +1,13 @@
-import sys
 import logging
-from pathlib import Path
+from .constants import FINRANK_DIR
+import sys
 logger = logging.getLogger(__name__)
-logger.info("loading FinRank")
-FINRANK_PATH: Path = Path(__file__).parent.parent.parent / "data/FinRank"
-sys.path.insert(0, str(FINRANK_PATH/'baselines'))
-from run_baselines import load_records, build_corpus, per_record_metrics, aggregate, tokenize
-logger.info("loaded FinRank methods")
-DATA_PATH: Path = FINRANK_PATH / "FinRank.jsonl"
 
+sys.path.insert(0, str(FINRANK_DIR / 'baselines'))
+from run_baselines import load_records, build_corpus, per_record_metrics, aggregate, tokenize
 
 aggregate = aggregate
 per_record_metrics = per_record_metrics
-tokenize = tokenize
 
 def gold_records(records: list[dict]) -> list[set]:
     golds = []
@@ -21,7 +16,7 @@ def gold_records(records: list[dict]) -> list[set]:
         golds.append(gold_passages)
     return golds
 
-RECORDS: list[dict] = load_records(DATA_PATH)
+RECORDS: list[dict] = load_records(FINRANK_DIR / "FinRank.jsonl")
 TEXT, METADATA, INDEX = build_corpus(RECORDS)
 QUESTIONS: list[dict] = [rec['question'] for rec in RECORDS]
 GOLDS: list[set] = gold_records(RECORDS)
