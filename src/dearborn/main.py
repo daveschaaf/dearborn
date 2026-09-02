@@ -13,14 +13,14 @@ def main() -> None:
     logger = logging.getLogger(__name__)
     logger.info("Running main.py...")
 
-    hyst_query = HySTQuery("Qwen/Qwen2.5-3B-Instruct")
-
-    vector_store = VectorStore(QDRANT_URL, QDRANT_COLLECTION_MP)
     # vector_store.delete_collection()
     # vector_store.create_collection()
     # vector_store.upsert(TEXT, METADATA)
 
-    N = 10
+    hyst_query = HySTQuery("Qwen/Qwen2.5-3B-Instruct")
+
+    vector_store = VectorStore(QDRANT_URL, QDRANT_COLLECTION_MP)
+    N = len(QUESTIONS)
     scores = []
     for i in range(N):
         q = QUESTIONS[i] 

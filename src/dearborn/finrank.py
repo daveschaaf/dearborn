@@ -12,7 +12,7 @@ per_record_metrics = per_record_metrics
 def gold_records(records: list[dict]) -> list[set]:
     golds = []
     for rec in records:
-        gold_passages = set(INDEX[p['text']] for p in rec['passages'] if rec['passages']  )
+        gold_passages = set(INDEX[p['text']] for p in rec['passages'] if p['text'].strip() )
         golds.append(gold_passages)
     return golds
 
